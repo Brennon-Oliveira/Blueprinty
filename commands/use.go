@@ -169,5 +169,11 @@ func createFile(filePath string, userResponses map[string]string) {
 	}
 	defer newFile.Close()
 
-	_, _ = newFile.WriteString(content)
+	_, err = newFile.WriteString(content)
+	if err != nil {
+		println("Erro ao escrever no arquivo", path)
+		return
+	}
+
+	println("Arquivo", path, "criado")
 }
