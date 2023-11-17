@@ -91,7 +91,7 @@ func getUserValues(titles []string) map[string]string {
 		}
 		fmt.Print(title, ": ")
 		value, _ := reader.ReadString('\n')
-		values[title] = strings.Replace(value, "\n", "", -1)
+		values[title] = strings.ReplaceAll(strings.Replace(value, "\n", "", -1), "\r", "")
 	}
 
 	return values
@@ -101,6 +101,9 @@ func createFiles(templatePath string, userResponses map[string]string) {
 	files, _ := os.ReadDir(templatePath)
 
 	for _, file := range files {
+		if file.Name() == ".config" {
+			continue
+		}
 		if file.IsDir() {
 			createFiles(templatePath+"/"+file.Name(), userResponses)
 			continue
@@ -123,36 +126,48 @@ func createFile(filePath string, userResponses map[string]string) {
 	var path string
 	firstLine := true
 
-	//hasPlus := false
-	//hasFirstCurlyBraces := false
-	//hasSecondCurlyBraces := false
-	//hasFirstCloseBrackets := false
-
 	for {
 		char, _, err := reader.ReadRune()
 		if err != nil {
 			break
+		}
+		if char == '\r' {
+			continue
 		}
 		if firstLine {
 			if char == '\n' {
 				firstLine = false
 				continue
 			}
-			if char == '+' {
-
-			}
 			path += string(char)
+			continue
 		}
 
 		content += string(char)
 	}
 
-	//file, err = os.Create()
-	//if err != nil {
-	//	println("Erro ao criar arquivo", filePath)
-	//	return
-	//}
-	//defer file.Close()
-	//
-	//file.WriteString(content)
+	path = utils.ProcessTemplate(path, userResponses)
+
+	err = utils.MakeDirs(path)
+	if err != nil {
+		println("Erro ao criar diretório", path)
+		return
+	}
+
+	content = utils.ProcessTemplate(content, userResponses)
+
+	// return if file already exists
+	if utils.DirExists(path) {
+		println("Arquivo", path, "já existe")
+		return
+	}
+
+	newFile, err := os.Create(path)
+	if err != nil {
+		println("Erro ao criar arquivo", path)
+		return
+	}
+	defer newFile.Close()
+
+	_, _ = newFile.WriteString(content)
 }
